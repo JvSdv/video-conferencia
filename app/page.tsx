@@ -98,7 +98,7 @@ export default function Page() {
     >
       <MyVideoConference />
       <RoomAudioRenderer />
-      <ControlBar className="absolute bottom-10 bg-[#373737] rounded-lg left-[50%] translate-x-[-50%]" style={{padding:"0.5rem"}} variation="minimal" saveUserChoices={true}/>
+      <ControlBar className="absolute bottom-10 bg-[#0F0F0F] rounded-lg left-[50%] translate-x-[-50%]" style={{padding:"0.5rem"}} variation="minimal" saveUserChoices={true}/>
     </LiveKitRoom>
   )
 }
