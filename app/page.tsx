@@ -1,6 +1,6 @@
 'use client'
 
-import { Dispatch, SetStateAction, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import {
   ControlBar,
   GridLayout,
@@ -8,11 +8,10 @@ import {
   ParticipantTile,
   RoomAudioRenderer,
   useTracks,
-  useParticipants,
 } from "@livekit/components-react"
 import "@livekit/components-styles"
 import { Track } from "livekit-client"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent,DialogTitle, DialogFooter} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
