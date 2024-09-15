@@ -1,18 +1,19 @@
 'use client'
 
-import { Dispatch, SetStateAction, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import {
   ControlBar,
   GridLayout,
   LiveKitRoom,
+  ParticipantClickEvent,
   ParticipantTile,
   RoomAudioRenderer,
+  TrackReference,
   useTracks,
-  useParticipants,
 } from "@livekit/components-react"
 import "@livekit/components-styles"
 import { Track } from "livekit-client"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
@@ -110,10 +111,47 @@ function MyVideoConference() {
     ],
     { onlySubscribed: false },
   )
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedTrackRef, setSelectedTrackRef] = useState<TrackReference | null>(null);
+
+  const handleParticipantClick = (event: ParticipantClickEvent) => {
+    if (event.track) {
+      setSelectedTrackRef({
+        participant: event.participant,
+        publication: event.track,
+        source: event.track.source,
+      });
+    }
+  };
   
+  useEffect(() => {
+    setIsDialogOpen(!!selectedTrackRef);
+  }, [selectedTrackRef]);
+  
+  const handleCloseModal = () => {
+    setSelectedTrackRef(null);
+  };
+
   return (
-    <GridLayout tracks={tracks} style={{ height: '100vh' }}>
-      <ParticipantTile />
-    </GridLayout>
+    <>
+      <Dialog open={isDialogOpen} onOpenChange={()=>handleCloseModal()}>
+        <DialogContent className="text-white bg-[#373737] min-w-[576px] max-w-xl lg:max-w-4xl max-h-full p-4 gap-1 rotate-90 sm:rotate-0 ">
+          <DialogDescription>
+            câmera em foco:
+          </DialogDescription>
+          <DialogTitle></DialogTitle>
+          {selectedTrackRef && (
+            <ParticipantTile
+              className="w-full aspect-video h-full p-0"
+              trackRef={selectedTrackRef}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      <GridLayout tracks={tracks} style={{ height: '100vh' }}>
+        <ParticipantTile onParticipantClick={handleParticipantClick} />
+      </GridLayout>
+    </>
   )
 }
