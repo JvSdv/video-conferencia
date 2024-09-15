@@ -93,11 +93,11 @@ export default function Page() {
       token={token}
       serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
       data-lk-theme="default"
-      className="h-[100vh] w-[100vw]"
+      className="relative h-[100vh] w-[100vw]"
     >
       <MyVideoConference />
       <RoomAudioRenderer />
-      <ControlBar className="bg-[#373737]" variation="minimal" saveUserChoices={true}/>
+      <ControlBar className="absolute bottom-10 bg-[#373737] rounded-lg left-[50%] translate-x-[-50%]" style={{padding:"0.5rem"}} variation="minimal" saveUserChoices={true}/>
     </LiveKitRoom>
   )
 }
@@ -112,7 +112,7 @@ function MyVideoConference() {
   )
   
   return (
-    <GridLayout tracks={tracks} style={{ height: 'calc(100vh - var(--lk-control-bar-height))' }} >
+    <GridLayout tracks={tracks} style={{ height: '100vh' }}>
       <ParticipantTile />
     </GridLayout>
   )
