@@ -12,7 +12,7 @@ import {
 } from "@livekit/components-react"
 import "@livekit/components-styles"
 import { Track } from "livekit-client"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
@@ -21,8 +21,6 @@ export default function Page() {
   const [name, setName] = useState("")
   const [token, setToken] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [initialAudioState, setInitialAudioState] = useState(false)
-  const [initialVideoState, setInitialVideoState] = useState(false)
 
   useEffect(() => {
     const storedName = localStorage.getItem("username")
@@ -66,9 +64,7 @@ export default function Page() {
           }
         }}>
           <DialogContent className="text-white">
-            <DialogHeader>
-              <DialogTitle >Digite seu nome:</DialogTitle>
-            </DialogHeader>
+            <DialogTitle >Digite seu nome:</DialogTitle>
             <form onSubmit={handleNameSubmit}>
               <div className="grid gap-4 py-4">
                 <Input
@@ -92,26 +88,21 @@ export default function Page() {
 
   return (
     <LiveKitRoom
-      video={initialVideoState}
-      audio={initialAudioState}
+      video={false}
+      audio={false}
       token={token}
       serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
       data-lk-theme="default"
-      style={{ height: '100dvh' }}
+      className="relative h-[100vh] w-[100vw]"
     >
-      <MyVideoConference setInitialAudioState={setInitialAudioState} setInitialVideoState={setInitialVideoState} />
+      <MyVideoConference />
       <RoomAudioRenderer />
-      <ControlBar />
+      <ControlBar className="absolute bottom-10 bg-[#373737] rounded-lg left-[50%] translate-x-[-50%]" style={{padding:"0.5rem"}} variation="minimal" saveUserChoices={true}/>
     </LiveKitRoom>
   )
 }
 
-function MyVideoConference({ setInitialAudioState, setInitialVideoState } :
-  {
-    setInitialAudioState: Dispatch<SetStateAction<boolean>>,
-    setInitialVideoState: Dispatch<SetStateAction<boolean>>
-  }
-) {
+function MyVideoConference() {
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -120,20 +111,8 @@ function MyVideoConference({ setInitialAudioState, setInitialVideoState } :
     { onlySubscribed: false },
   )
   
-  const participants = useParticipants()
-
-  useEffect(() => {
-    if (participants.length <= 1) {
-      setInitialAudioState(true)
-      setInitialVideoState(true)
-    } else {
-      setInitialAudioState(false)
-      setInitialVideoState(false)
-    }
-  }, [participants, setInitialAudioState, setInitialVideoState])
-
   return (
-    <GridLayout tracks={tracks} style={{ height: 'calc(100vh - var(--lk-control-bar-height))' }}>
+    <GridLayout tracks={tracks} style={{ height: '100vh' }}>
       <ParticipantTile />
     </GridLayout>
   )
