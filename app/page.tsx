@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { ChangeEvent, useEffect, useState } from "react"
 import {
   ControlBar,
   GridLayout,
@@ -16,12 +16,17 @@ import { Track } from "livekit-client"
 import { Dialog, DialogContent, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import {
+  Loader,
+  Settings
+} from 'lucide-react';
 
 export default function Page() {
   const room = "quickstart-room"
-  const [name, setName] = useState("")
-  const [token, setToken] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [name, setName] = useState("");
+  const [token, setToken] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const storedName = localStorage.getItem("username")
@@ -36,7 +41,7 @@ export default function Page() {
   const generateToken = async (username: string) => {
     try {
       const resp = await fetch(
-        `/api/get-participant-token?room=${room}&username=${username}`
+        `/api/get-participant-token?room=${room}&username=${username}`, {cache: "no-cache"}
       )
       const data = await resp.json()
       setToken(data.token)
@@ -51,12 +56,30 @@ export default function Page() {
       const uniqueName = `${name}-${Math.random().toString(36).substr(2, 5)}`
       localStorage.setItem("username", uniqueName)
       setName(uniqueName)
+      if(isEditing){
+        setIsEditing(false);
+        window.location.href = window.location.origin;
+      }
       setIsDialogOpen(false)
       generateToken(uniqueName)
     }
   }
 
-  if (token === "") {
+  const handleNameChange = (e:ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value.replace(/-/g, "_");
+    setName(newValue);
+  };
+
+  const handleOpenModalToEditName = () =>{
+    setName((prev) => {
+      const indexOfDash = prev.indexOf('-');
+      return indexOfDash !== -1 ? prev.slice(0, indexOfDash) : prev;
+    });
+    setIsEditing(true);
+    setIsDialogOpen(true);
+  }
+
+  if (token === "" || isDialogOpen) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -64,25 +87,27 @@ export default function Page() {
             setIsDialogOpen(open)
           }
         }}>
-          <DialogContent className="text-white">
-            <DialogTitle >Digite seu nome:</DialogTitle>
+          <DialogContent className="text-white gap-1">
+            <DialogDescription>
+            </DialogDescription>
+            <DialogTitle>{isEditing ? "Edite": "Digite"} seu nome:</DialogTitle>
             <form onSubmit={handleNameSubmit}>
               <div className="grid gap-4 py-4">
                 <Input
                   id="name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={handleNameChange}
                   required
                   autoFocus
                 />
               </div>
               <DialogFooter >
-                <Button type="submit">Entrar</Button>
+                <Button type="submit" variant={"secondary"} className="font-semibold">{isEditing ? "Salvar": "Entrar"}</Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
-        {!isDialogOpen && <div>Carregando...</div>}
+        {!isDialogOpen && <div className="flex">Carregando... <Loader width={16} height={16} className="animate-spin"/></div>}
       </div>
     )
   }
@@ -99,6 +124,7 @@ export default function Page() {
       <MyVideoConference />
       <RoomAudioRenderer />
       <ControlBar className="absolute bottom-10 bg-[#0F0F0F] rounded-lg left-[50%] translate-x-[-50%]" style={{padding:"0.5rem"}} variation="minimal" saveUserChoices={true}/>
+      <Settings className="absolute opacity-50 right-2 bottom-4" width={12} height={12} onClick={()=>handleOpenModalToEditName()} />
     </LiveKitRoom>
   )
 }
