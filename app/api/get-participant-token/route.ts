@@ -29,7 +29,16 @@ export async function GET(req: NextRequest) {
 
   const at = new AccessToken(apiKey, apiSecret, { identity: username });
 
-  at.addGrant({ room, roomJoin: true, canPublish: true, canSubscribe: true });
+  // Verifica se o nome contém "admin" (case insensitive)
+  const isAdmin = username.toLowerCase().includes("admin");
+
+  at.addGrant({
+    room,
+    roomJoin: true,
+    canPublish: true,
+    canSubscribe: true,
+    roomAdmin: isAdmin, // <-- Aqui está a permissão de admin
+  });
 
   return NextResponse.json({ token: await at.toJwt() });
 }
