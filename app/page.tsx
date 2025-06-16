@@ -9,10 +9,11 @@ import {
   ParticipantTile,
   RoomAudioRenderer,
   TrackReference,
+  useRoomContext,
   useTracks,
 } from "@livekit/components-react"
 import "@livekit/components-styles"
-import { Track } from "livekit-client"
+import { LocalAudioTrack, LocalTrackPublication, RoomEvent, Track } from "livekit-client"
 import { Dialog, DialogContent, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,20 @@ import {
   Loader,
   Settings
 } from 'lucide-react';
+import { ParticipantTileWithAdminOptions } from "@/components/ParticipantAdmin";
+
+
+type KickParticipantRequest = {
+  room: string;
+  identity: string;
+};
+
+type MuteTrackRequest = {
+  room: string;
+  identity: string;
+  trackSid: string;
+  muted: boolean;
+};
 
 export default function Page() {
   const room = "quickstart-room"
@@ -121,7 +136,7 @@ export default function Page() {
       data-lk-theme="default"
       className="relative h-[100vh] w-[100vw]"
     >
-      <MyVideoConference />
+      <MyVideoConference isAdmin={name.toLowerCase().includes("admin")} roomName={room}/>
       <RoomAudioRenderer />
       <ControlBar className="absolute bottom-10 bg-[#0F0F0F] rounded-lg left-[50%] translate-x-[-50%]" style={{padding:"0.5rem"}} variation="minimal" saveUserChoices={true}/>
       <Settings className="absolute opacity-50 right-2 bottom-4" width={12} height={12} onClick={()=>handleOpenModalToEditName()} />
@@ -129,7 +144,7 @@ export default function Page() {
   )
 }
 
-function MyVideoConference() {
+function MyVideoConference({isAdmin, roomName }: { isAdmin: boolean, roomName: string }) {
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -159,6 +174,119 @@ function MyVideoConference() {
     setSelectedTrackRef(null);
   };
 
+  // Função para expulsar participante
+  async function kickParticipant(room: string, identity: string) {
+    try {
+      const resp = await fetch("/api/kick-participant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room, identity } as KickParticipantRequest),
+      });
+      if (!resp.ok) {
+        const data = await resp.json();
+        throw new Error(data.error || "Erro ao expulsar participante");
+      }
+    } catch (e) {
+      if (e instanceof Error) {
+        alert(e.message);
+      } else {
+        alert("Erro ao expulsar participante");
+      }
+    }
+  }
+
+  // Função para mutar track
+  async function muteTrack(room: string, identity: string, trackSid: string, muted: boolean) {
+    try {
+      const resp = await fetch("/api/mute-track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room, identity, trackSid, muted } as MuteTrackRequest),
+      });
+      if (!resp.ok) {
+        const data = await resp.json();
+        throw new Error(data.error || "Erro ao mutar track");
+      }
+    } catch (e) {
+      if (e instanceof Error) {
+        alert(e.message);
+      } else {
+        alert("Erro ao expulsar participante");
+      }
+    }
+  }
+
+  const roomContext = useRoomContext();
+
+  // Habilita o filtro de ruído Krisp para o microfone local
+  useEffect(() => {
+    if (!roomContext) return;
+    if (!isAdmin) return;
+
+    const handleLocalTrackPublished = async (trackPublication: LocalTrackPublication) => {
+      if (
+        trackPublication.source === Track.Source.Microphone &&
+        trackPublication.track instanceof LocalAudioTrack
+      ) {
+        const { KrispNoiseFilter, isKrispNoiseFilterSupported } = await import('@livekit/krisp-noise-filter');
+
+        if (!isKrispNoiseFilterSupported()) {
+          console.warn('Krisp noise filter is not supported on this browser');
+          return;
+        }
+
+        try {
+          // Cria um AudioContext se ainda não existir
+          const audioContext = new AudioContext();
+
+          // Define o contexto de áudio necessário
+          trackPublication.track.setAudioContext(audioContext);
+
+          const krispProcessor = KrispNoiseFilter();
+          console.log('Enabling LiveKit Krisp noise filter');
+
+          await trackPublication.track.setProcessor(krispProcessor);
+          await krispProcessor.setEnabled(true);
+        } catch (err) {
+          console.error('Failed to enable Krisp noise filter', err);
+        }
+      }
+    };
+
+    roomContext.on(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
+
+    return () => {
+      roomContext.off(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
+    };
+  }, [roomContext, isAdmin]);
+
+
+  const [hasLeft, setHasLeft] = useState(false);
+
+  useEffect(() => {
+    if (!roomContext) return;
+    const onDisconnect = () => setHasLeft(true);
+    roomContext.on('disconnected', onDisconnect);
+    return () => {
+      roomContext.off('disconnected', onDisconnect);
+    };
+  }, [roomContext]);
+
+  if (hasLeft) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-black text-white">
+        <h1 className="text-4xl font-bold mb-8">Você saiu da reunião</h1>
+        <Button
+          size="lg"
+          onClick={() => window.location.reload()}
+          className="text-lg px-8 py-4"
+        >
+          Voltar à reunião
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <>
       <Dialog open={isDialogOpen} onOpenChange={()=>handleCloseModal()}>
@@ -176,7 +304,10 @@ function MyVideoConference() {
         </DialogContent>
       </Dialog>
       <GridLayout tracks={tracks} style={{ height: '100vh' }}>
-        <ParticipantTile onParticipantClick={handleParticipantClick} />
+        {isAdmin
+          ? <ParticipantTileWithAdminOptions onParticipantClick={handleParticipantClick} isAdmin={isAdmin} roomName={roomName} kickParticipant={kickParticipant} muteTrack={muteTrack} />
+          : <ParticipantTile onParticipantClick={handleParticipantClick} />
+        }
       </GridLayout>
     </>
   )
