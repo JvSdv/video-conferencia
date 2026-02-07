@@ -22,6 +22,7 @@ import {
   Settings
 } from 'lucide-react';
 import { ParticipantTileWithAdminOptions } from "@/components/ParticipantAdmin";
+import { CastButton } from "@/components/CastButton";
 
 
 type KickParticipantRequest = {
@@ -152,6 +153,10 @@ function MyVideoConference({isAdmin, roomName }: { isAdmin: boolean, roomName: s
     ],
     { onlySubscribed: false },
   )
+
+  const adminScreenShareTrack = tracks.find(
+    (t) => t.source === Track.Source.ScreenShare && t.participant.identity.toLowerCase().includes("admin")
+  );
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTrackRef, setSelectedTrackRef] = useState<TrackReference | null>(null);
@@ -289,6 +294,11 @@ function MyVideoConference({isAdmin, roomName }: { isAdmin: boolean, roomName: s
 
   return (
     <>
+      {adminScreenShareTrack && !isAdmin && (
+        <div className="absolute top-4 left-4 z-[100]">
+          <CastButton />
+        </div>
+      )}
       <Dialog open={isDialogOpen} onOpenChange={()=>handleCloseModal()}>
         <DialogContent className="text-white bg-[#373737] min-w-[576px] max-w-xl lg:max-w-4xl max-h-full p-4 gap-1 rotate-90 sm:rotate-0 ">
           <DialogDescription>
