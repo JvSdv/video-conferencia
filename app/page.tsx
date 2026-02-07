@@ -296,7 +296,7 @@ function MyVideoConference({isAdmin, roomName }: { isAdmin: boolean, roomName: s
     <>
       {adminScreenShareTrack && !isAdmin && (
         <div className="absolute top-4 left-4 z-[100]">
-          <CastButton adminIdentity={adminScreenShareTrack.participant.identity} />
+          <CastButton />
         </div>
       )}
       <Dialog open={isDialogOpen} onOpenChange={()=>handleCloseModal()}>

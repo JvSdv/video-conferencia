@@ -4,49 +4,53 @@ import { Cast } from 'lucide-react';
 import { Button } from './ui/button';
 import { useEffect, useState } from 'react';
 
-export function CastButton({ adminIdentity }: { adminIdentity: string }) {
+export function CastButton() {
   const [isAvailable, setIsAvailable] = useState(false);
 
   useEffect(() => {
     const checkAvailability = () => {
-      // Verifica se a Remote Playback API está disponível em qualquer vídeo
-      const video = document.createElement('video');
-      // @ts-expect-error - remote is not in standard video type yet
-      if (video.remote && video.remote.prompt) {
+      // @ts-expect-error - cast is not in window type
+      if (window.cast?.framework) {
         setIsAvailable(true);
       }
     };
 
     checkAvailability();
+    const interval = setInterval(checkAvailability, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleCast = () => {
-    // Procura o elemento de vídeo do admin. 
-    // O LiveKit geralmente adiciona data-lk-participant-identity no container do tile.
-    const tiles = document.querySelectorAll(`[data-lk-participant-placeholder-identity="${adminIdentity}"], [data-lk-participant-identity="${adminIdentity}"]`);
-    
-    let videoElement: HTMLVideoElement | null = null;
-    tiles.forEach(tile => {
-      const video = tile.querySelector('video');
-      if (video) videoElement = video as HTMLVideoElement;
-    });
-
-    if (!videoElement) {
-      // Fallback: procura qualquer vídeo se não achar pelo identity (menos preciso)
-      videoElement = document.querySelector('video');
-    }
-
-    if (videoElement && videoElement.remote) {
-      videoElement.remote.prompt().then(
-        () => console.log('Remote playback prompt shown'),
+    // @ts-expect-error - cast is not in window type
+    const castContext = window.cast?.framework?.CastContext.getInstance();
+    if (castContext) {
+      castContext.requestSession().then(
+        (session: unknown) => {
+          console.log('Cast session started', session);
+          
+          // O receptor padrão do Google (Default Media Receiver) exige uma URL de vídeo.
+          // Para transmitir WebRTC em tempo real, o Google oficialmente exige um
+          // "Custom Web Receiver". Sem ele, a TV só mostra a tela inicial.
+          // A forma que "funciona" integrada é o usuário selecionar "Transmitir guia"
+          // após este botão abrir a conexão.
+          
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const chrome = (window as any).chrome;
+          if (chrome && chrome.cast) {
+            const mediaInfo = new chrome.cast.media.MediaInfo('', 'video/mp4');
+            const request = new chrome.cast.media.LoadRequest(mediaInfo);
+            // @ts-expect-error - session is unknown
+            session.loadMedia(request).catch((e: unknown) => console.log('Load skipped/failed:', e));
+          }
+        },
         (err: unknown) => {
           if (err !== 'cancel') {
-            console.error('Remote playback failed', err);
+            console.error('Cast session failed', err);
           }
         }
       );
     } else {
-      alert('Chromecast não disponível para este vídeo no seu navegador.');
+      alert('Chromecast não disponível. Certifique-se de estar usando o Chrome e ter um dispositivo na rede.');
     }
   };
 
