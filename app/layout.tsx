@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "Reunião de Estudo",
@@ -30,6 +31,7 @@ export default function RootLayout({
         className={`antialiased`}
       >
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
