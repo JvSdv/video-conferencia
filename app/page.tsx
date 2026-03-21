@@ -13,7 +13,8 @@ import {
   useTracks,
 } from "@livekit/components-react"
 import "@livekit/components-styles"
-import { LocalAudioTrack, LocalTrackPublication, RoomEvent, Track } from "livekit-client"
+import { useKrispNoiseFilter } from "@livekit/components-react/krisp";
+import { Track } from "livekit-client"
 import { Dialog, DialogContent, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -223,48 +224,13 @@ function MyVideoConference({isAdmin, roomName }: { isAdmin: boolean, roomName: s
 
   const roomContext = useRoomContext();
 
-  // Habilita o filtro de ruído Krisp para o microfone local
+  const { isNoiseFilterEnabled, setNoiseFilterEnabled } = useKrispNoiseFilter();
+
   useEffect(() => {
-    if (!roomContext) return;
-    if (!isAdmin) return;
-
-    const handleLocalTrackPublished = async (trackPublication: LocalTrackPublication) => {
-      if (
-        trackPublication.source === Track.Source.Microphone &&
-        trackPublication.track instanceof LocalAudioTrack
-      ) {
-        const { KrispNoiseFilter, isKrispNoiseFilterSupported } = await import('@livekit/krisp-noise-filter');
-
-        if (!isKrispNoiseFilterSupported()) {
-          console.warn('Krisp noise filter is not supported on this browser');
-          return;
-        }
-
-        try {
-          // Cria um AudioContext se ainda não existir
-          const audioContext = new AudioContext();
-
-          // Define o contexto de áudio necessário
-          trackPublication.track.setAudioContext(audioContext);
-
-          const krispProcessor = KrispNoiseFilter();
-          console.log('Enabling LiveKit Krisp noise filter');
-
-          await trackPublication.track.setProcessor(krispProcessor);
-          await krispProcessor.setEnabled(true);
-        } catch (err) {
-          console.error('Failed to enable Krisp noise filter', err);
-        }
-      }
-    };
-
-    roomContext.on(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
-
-    return () => {
-      roomContext.off(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
-    };
-  }, [roomContext, isAdmin]);
-
+    if (isAdmin && !isNoiseFilterEnabled) {
+      setNoiseFilterEnabled(true);
+    }
+  }, [isAdmin, isNoiseFilterEnabled, setNoiseFilterEnabled]);
 
   const [hasLeft, setHasLeft] = useState(false);
 
